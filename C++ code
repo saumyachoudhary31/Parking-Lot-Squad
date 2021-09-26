@@ -1,0 +1,231 @@
+/*
+PARKING LOT
+
+I have used Object Oriented Paradigm
+We will make only 1 object  instances of class named as Parking System 
+here private variable slots are total Number of slots
+
+Data Structure Used:
+Min heap is used to provide us vacant slot which is available nearest to the entry
+Min heap is named as nearest_slot_available
+
+I have maps because its serach,insertion and deletion time is log(n) 
+I have used 3 maps
+1)occupied_slot :In which we save Vehicle Registration numbers and drivers age and assign nearest slot.
+Slot->{Vehicle Registration numbers,drivers age}
+
+2)registration_slot: Which maps Vehicle Registration numbers to slots which is used in finding Slot number in which a car with a given vehicle registration plate is parked.
+Vehicle Registration numbers->Slot 
+
+3)age_determiner: It stores age as key and value as(map which has slot as key and Vehicle Registration numbers as value) it is used in finding slot number and vehicle registration number which are parked by the driver of a certain age
+age->slot->Vehicle Registration numbers
+
+
+*/
+//Including header files
+#include <iostream>
+#include <fstream>
+#include <string>
+#include<bits/stdc++.h>
+using namespace std;
+
+class ParkingSystem {
+
+  private:
+  //total number of slots
+  int slots;
+
+  /*occupied_slot: which stores slot number as key and Vehicle Registration numbers and drivers age as value (inside pair)*/
+
+  map<int,pair<string,int>> occupied_slot;
+
+  map<string,int> registration_slot;
+
+  map<int,map<int,string>> age_determiner;
+
+  //min heap to give nearest available slot
+  priority_queue<int,vector<int>,greater<int>> nearest_slot_available;
+
+  public:
+    ParkingSystem(int slots) {
+
+        // Making parking lot with number of slots
+        this->slots=slots;
+        for(int i=1;i<=slots;i++){
+          nearest_slot_available.push(i);
+        }
+        cout<<"Created parking of "<<slots<<" slots\n";
+
+    }
+    
+    //Allocating Slots
+    void park_Vehicle(string vehicle_registartion_number,int driver_age) {
+
+      if(nearest_slot_available.size()){
+        //finding nearest available slot
+        int avaiable_slot=nearest_slot_available.top();
+        nearest_slot_available.pop();
+
+        //storing detials in map and allocating slot
+        occupied_slot[avaiable_slot]={vehicle_registartion_number,driver_age};
+        registration_slot[vehicle_registartion_number]=avaiable_slot;
+        age_determiner[driver_age][avaiable_slot]=vehicle_registartion_number;
+        
+        cout<<"Car with vehicle registration number \""<<vehicle_registartion_number<<"\" has been parked at slot number "<<avaiable_slot<<"\n";
+      }
+      //if parking is full
+      else{
+        cout<<"Sorry for inconvience !! Parking is full";
+      }
+
+    }
+
+    //For leave command when car is leaving
+    void Vehicle_Leaving(int slotnumber){
+      
+      //checking if the car is parked on slot number
+      if(occupied_slot.find(slotnumber)!=occupied_slot.end()){
+
+        //deleting details from the maps and including slot number in min heap
+        pair<string,int> vacant=occupied_slot[slotnumber];
+        nearest_slot_available.push(slotnumber);
+        occupied_slot.erase(slotnumber);
+        registration_slot.erase(vacant.first);
+        age_determiner[vacant.second].erase(slotnumber);
+        
+        cout<<"Slot number "<<slotnumber<<" vacated, the car with vehicle registration number \""<<vacant.first<<"\" left the space, the driver of the car was of age "<<vacant.second<<"\n";
+
+      }
+
+      else{
+        cout<<"The slot is already vacant";
+      }
+
+    }
+
+    //To find Slot numbers of all slots where cars of drivers of a particular age are parked
+
+    void Find_slot_from_age(int age){
+
+      bool is_first=true;
+      //checking if cars are parked with certain driver age
+      if(age_determiner.find(age)!=age_determiner.end()){
+
+        if(age_determiner[age].size()){
+          //Iterating the map and printing all slots from map age_determiner 
+
+          for(auto these_slots:age_determiner[age]){
+            if(is_first){is_first=false;}
+            else{cout<<",";}
+              cout<<these_slots.first;
+          }
+          cout<<"\n";
+        }
+      }
+      
+    }
+
+    //To find Vehicle Registration numbers for all cars which are parked by the driver of a certain age
+
+    void Find_registration_number_from_age(int age){
+
+      bool is_first=true;
+      //checking if cars are parked with certain driver age
+      if(age_determiner.find(age)!=age_determiner.end()){
+
+        if(age_determiner[age].size()){
+          //Iterating the map and printing all vehicle registartion number from map age_determiner
+
+          for(auto these_slots:age_determiner[age]){
+            if(is_first){is_first=false;}
+            else{cout<<",";}
+              cout<<these_slots.second;
+          }
+          cout<<"\n";
+        }
+      }
+      
+    }
+
+    //To find Slot number in which a car with a given vehicle registration plate is parked
+
+    void Find_slot_from_registration_number(string registraion_Number){
+      
+      //checking if the car with particular registraion number is parked or not
+
+      if(registration_slot.find(registraion_Number)!=registration_slot.end()){
+        cout<<registration_slot[registraion_Number]<<"\n";
+      }
+      else{cout<<"This car is not parked at this parking\n";}
+      
+    }
+    
+
+};
+
+int main () {
+ 
+  string line;
+  ifstream myfile ("input.txt");//Taking input from input.txt
+  if (myfile.is_open())
+  {
+    ParkingSystem* obj;//Creating Object of class 
+    while ( getline (myfile,line) )
+    {
+      int pos = line.find(" ");
+      string command = line.substr(0,pos);
+      if(command=="Park"){
+        
+        string reg_number=line.substr(pos + 1);
+        int number_pos=reg_number.find(" ");
+        string age=reg_number.substr(number_pos+1);
+        reg_number=reg_number.substr(0,number_pos);//vehicle_registartion_number
+        number_pos=age.find(" ");
+        age=age.substr(number_pos+1);
+        int driver_age=stoi(age);//Age of driver
+        obj->park_Vehicle(reg_number,driver_age);//Allocating slot
+      }
+      else if(command=="Leave"){
+        string num = line.substr(pos + 1);
+         int nums=stoi(num);
+         obj->Vehicle_Leaving(nums);//Calling function when the car is leaving 
+        
+
+      }
+      else if(command=="Slot_numbers_for_driver_of_age"){
+         string num = line.substr(pos + 1);
+         int nums=stoi(num);
+         obj->Find_slot_from_age(nums);
+         //calling function to find slot by drivers age
+
+      }
+      else if(command=="Slot_number_for_car_with_number"){
+        string num = line.substr(pos + 1);
+        obj->Find_slot_from_registration_number(num);
+        //Calling function to find slot with vehicle_registartion_number
+
+      }
+      else if(command=="Vehicle_registration_number_for_driver_of_age"){
+         string num = line.substr(pos + 1);
+         int nums=stoi(num);
+         obj->Find_registration_number_from_age(nums);
+         //Calling function to find vehicle_registartion_number 
+
+      }
+      else if(command=="Create_parking_lot"){
+          string num = line.substr(pos + 1);
+          int nums=stoi(num);//Number of slots
+          obj= new ParkingSystem(nums);//Instantiating object 
+
+      }
+      else {cout<<"You have given wrong command\n";}
+      
+      
+    }
+    myfile.close();
+  }
+
+  else cout << "Unable to open file"; 
+
+  return 0;
+}
